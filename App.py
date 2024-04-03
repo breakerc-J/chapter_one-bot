@@ -10,6 +10,9 @@ st.markdown(
 # Hello!
             
 Welcome to my FullstackGPT Portfolio!
+And
+Please visit my Github :
+https://github.com/breakerc-J/chapter_one-bot
             
 Here are the apps I made:
             
