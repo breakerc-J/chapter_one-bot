@@ -170,3 +170,8 @@ if file:
 
 else:
     st.session_state["messages"]=[]
+
+with st.sidebar:
+    st.write(
+        "https://github.com/breakerc-J/chapter_one-bot/blob/main/pages/01_DocumentGPT.py"
+    )
