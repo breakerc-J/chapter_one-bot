@@ -4,3 +4,4 @@ env/
 .streamlit/
 notebook_rag.ipynb
 pages/99_DocumentGPT2.py
+pages/98_DocumentGPT3.py

@@ -49,36 +49,35 @@ class ChatCallbackHandler(BaseCallbackHandler):
         self.message += token
         self.message_box.markdown(self.message)
 
-if "messages" not in st.session_state:
-    st.session_state["messages"] = []
+api_key = st.sidebar.text_input(
+    "Put your OpenAI API Key here")
 
-if "api_key" not in st.session_state:
-    st.session_state["api_key"] = None
+memory_llm = None
 
-if "api_key_bool" not in st.session_state:
-    st.session_state["api_key_bool"] = False
-
-pattern = r'sk-.*'
-
-llm = ChatOpenAI(
-    temperature=0.1,
-    streaming=True,
-    callbacks=[
-        ChatCallbackHandler(),
-    ],
-    openai_api_key=st.session_state["api_key"],
-
-)
+if api_key:
+    llm = ChatOpenAI(
+        temperature=0.1,
+        streaming=True,
+        callbacks=[
+            ChatCallbackHandler(),
+        ],
+    )
+    memory_llm = ChatOpenAI(
+        temperature=0.1,
+        api_key=api_key,
+    )
+else:
+    st.warning("Please enter your OpenAI API Key.")
 
 
 @st.cache_data(show_spinner="Embedding file...")
 def embed_file(file):
     file_content = file.read()
     file_path = f"./.cache/files/{file.name}"
-    os.makedirs(f"./..cache/files/", exist_ok=True)
+    os.makedirs(f"./.cache/files/", exist_ok=True)
     with open(file_path, "wb") as f:
         f.write(file_content)
-    os.makedirs(f"./..cache/embeddings", exist_ok=True)
+    os.makedirs(f"./.cache/embeddings", exist_ok=True)
     cache_dir = LocalFileStore(f"./.cache/embeddings/{file.name}")
     splitter = CharacterTextSplitter.from_tiktoken_encoder(
         separator="\n",
@@ -93,8 +92,6 @@ def embed_file(file):
     retriever = vectorstore.as_retriever()
     return retriever
 
-def save_api_key(api_key):
-    st.session_state["api_key"] = api_key
 
 def save_message(message, role):
     st.session_state["messages"].append({"message": message, "role": role})
@@ -148,42 +145,27 @@ Upload your files on the sidebar.
 )
 
 with st.sidebar:
-    api_key = st.text_input("Please enter your OPENAI_API_KEY.").strip()
-
-    if api_key:
-        save_api_key(api_key)
-        st.write("API_KEY has been entered.")
-        st.session_state["api_key_bool"] = True
-        st.session_state["api_key"] = api_key
-
-    button = st.button("SAVE")
-
-    if button:
-        save_api_key(api_key)
-
-        if api_key == "":
-            st.write("Please enter OPENAI_API_KEY.")
-            
-
-with st.sidebar:
     file = st.file_uploader(
         "Upload a .txt .pdf or .docx file",
         type=["pdf", "txt", "docx"],
     )
-if (st.session_state["api_key_bool"] == True) and (st.session_state["api_key"] != None):
-    if file:
-        retriever = embed_file(file)
-        send_message("I'm ready! Ask away!", "ai", save=False)
-        paint_history()
-        message = st.chat_input("Ask anything about your file...")
-        if message:
-            send_message(message, "human")
-            chain = {
-                "context": retriever | RunnableLambda(format_docs) | RunnableLambda(lambda docs: update_conversation_memory(docs, "system")),
-                "question": RunnablePassthrough() | RunnableLambda(lambda question: update_conversation_memory(question, "human")),
-            } | prompt | llm
-            with st.chat_message("ai"):
-                chain.invoke(message)
-                 
-    else:
-        st.session_state["messages"]=[]
+
+if file:
+    retriever = embed_file(file)
+    send_message("I'm ready! Ask away!", "ai", save=False)
+    paint_history()
+    message = st.chat_input("Ask anything about your file...")
+    if message:
+        send_message(message, "human")
+        chain = {
+            "context": retriever | RunnableLambda(format_docs) | RunnableLambda(lambda docs: update_conversation_memory(docs, "system")),
+            "question": RunnablePassthrough() | RunnableLambda(lambda question: update_conversation_memory(question, "human")),
+        } | prompt | llm
+
+
+        with st.chat_message("ai"):
+            chain.invoke(message)
+       
+
+else:
+    st.session_state["messages"]=[]
